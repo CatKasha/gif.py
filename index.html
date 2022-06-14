@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        canvas {
+            border: black solid 1px;
+            image-rendering: pixelated;
+            min-width: 400px;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="color_palette" width="16" height="16"></canvas>
+    <canvas id="image_data"></canvas>
+    <script src="gif_data.js"></script>
+    <script>
+        let canvas_color_palette = document.getElementById("color_palette");
+        let canvas_image_data = document.getElementById("image_data");
+
+        canvas_image_data.height = image_height;
+        canvas_image_data.width = image_width;
+
+        let ctx = canvas_color_palette.getContext("2d");
+        let buf = ctx.getImageData(0, 0, canvas_color_palette.width, canvas_color_palette.height);
+        buf.data.fill(200);
+        for (let i = 0; global_color_map.length > i; i++) {
+            buf.data[i * 4 + 0] = global_color_map[i][0];
+            buf.data[i * 4 + 1] = global_color_map[i][1];
+            buf.data[i * 4 + 2] = global_color_map[i][2];
+            buf.data[i * 4 + 3] = 255;
+        }
+        ctx.putImageData(buf, 0, 0);
+
+        ctx = canvas_image_data.getContext("2d");
+        buf = ctx.getImageData(0, 0, canvas_image_data.width, canvas_image_data.height);
+        index_stream = index_stream.join().split(",");
+        for (let i = 0; index_stream.length > i; i++) {
+            buf.data[i * 4 + 0] = global_color_map[index_stream[i]][0];
+            buf.data[i * 4 + 1] = global_color_map[index_stream[i]][1];
+            buf.data[i * 4 + 2] = global_color_map[index_stream[i]][2];
+            buf.data[i * 4 + 3] = 255;
+        }
+        ctx.putImageData(buf, 0, 0);
+    </script>
+</body>
+
+</html>

@@ -1,1 +1,23 @@
 # gif.py
+Attempt to create a gif decoder
+
+## Usage
+```
+gif.py path_to_gif
+```
+It will create `gif_data.js` that include decoded color table and index stream of image  
+To view decoded color table and image open `index.html`
+
+## TODO
+- Local Color Table
+- Parse all extensions
+- Animation and Transparency
+- Gif viewer using Tkinter
+- ...
+- Rewrite everything in C
+
+## References
+GIF specification [GIF87a](https://www.w3.org/Graphics/GIF/spec-gif87.txt)  
+GIF specification [GIF89a](https://www.w3.org/Graphics/GIF/spec-gif89a.txt)  
+[What's In A GIF](https://www.matthewflickinger.com/lab/whatsinagif/)  
+^ great guide that take you through GIF89a spec and explain everything, including LZW algorithm
