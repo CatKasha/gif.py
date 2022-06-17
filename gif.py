@@ -1,11 +1,11 @@
 import sys, os.path, traceback
 
 
-def make_gif_data(image_height, image_width, global_color_map, index_stream):
+def make_gif_data(image_height, image_width, global_color_table, index_stream):
     with open("gif_data.js", "w") as f:
         gif_data = f"let {image_height = };\n"
         gif_data += f"let {image_width = };\n"
-        gif_data += f"let {global_color_map = };\n"
+        gif_data += f"let {global_color_table = };\n"
         gif_data += f"let {index_stream = };\n"
         f.write(gif_data)
 
@@ -24,12 +24,12 @@ def gif(f_path, r_html=None):
     global_color_table_flag = None
     color_resolution = None
     global_sort_flag = None
-    global_bits_per_pixel = None
+    size_of_global_table = None
     background_color_index = None
     pixel_aspect_ratio = None
 
     #global color table
-    global_color_map = []
+    global_color_table = []
 
     #application extension
 
@@ -43,9 +43,13 @@ def gif(f_path, r_html=None):
     image_top_pos = None
     image_width = None
     image_height = None
+    local_color_table_flag = None
+    interlace_flag = None
+    sort_flag = None
+    size_of_local_table = None
 
     #local color table
-    local_color_table = None
+    local_color_table = []
 
     #image data
     lzw_minimal_code_size = None
@@ -82,18 +86,17 @@ def gif(f_path, r_html=None):
         if(global_sort_flag and gif_version != "87a"):
             print("global_sort_flag is not zero")
 
-        # in 89a spec raise 2
-        global_bits_per_pixel = int(buf[5:], 2) + 1
+        size_of_global_table = int(buf[5:], 2)
         background_color_index = fab.read(1)[0]
         pixel_aspect_ratio = fab.read(1)[0]
 
 
         #global color table
-        for n in range(2 ** (global_bits_per_pixel)):
+        for n in range(2 ** (size_of_global_table + 1)):
             temp_var = []
             for i in range(3):
                 temp_var.append(fab.read(1)[0])
-            global_color_map.append(temp_var)
+            global_color_table.append(temp_var)
 
 
         #extensions not have correct order so parce everything that can be found before moving on
@@ -156,18 +159,22 @@ def gif(f_path, r_html=None):
         if(image_height > logical_screen_height):
             sys.exit("image_height bigger than logical_screen_height")
 
-        #TODO packed field
-        fab.seek(1, 1)
+        buf = bin(fab.read(1)[0])[2:].zfill(8)
 
-        """
+        local_color_table_flag = bool(int(buf[0]))
+        interlace_flag = bool(int(buf[1]))
+        sort_flag = bool(int(buf[2]))
+        size_of_local_table = int(buf[5:], 2)
+
         #local color table
+        #TODO currently local_color_table overwrite global_color_talbe
         if(local_color_table_flag):
-            for n in range(2 ** (bits_per_pixel)):
+            global_color_table = []
+            for n in range(2 ** (size_of_local_table + 1)):
                 temp_var = []
                 for i in range(3):
                     temp_var.append(fab.read(1)[0])
-                local_color_table.append(temp_var)
-        """
+                global_color_table.append(temp_var)
 
 
         #image data
@@ -178,7 +185,7 @@ def gif(f_path, r_html=None):
 
         sub_block_size = fab.read(1)[0]
 
-        for i in range(len(global_color_map)):
+        for i in range(len(global_color_table)):
             code_table[i] = [i]
 
         code_table[len(code_table)] = "CLR"
@@ -270,7 +277,7 @@ def gif(f_path, r_html=None):
             traceback.print_exc()
 
     if (r_html):
-        make_gif_data(image_height, image_width, global_color_map, index_stream)
+        make_gif_data(image_height, image_width, global_color_table, index_stream)
 
 def main():
     print(sys.argv)

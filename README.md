@@ -9,8 +9,12 @@ It will create `gif_data.js` that include decoded color table and index stream o
 To view decoded color table and image open `index.html`
 
 ## TODO
-- Local Color Table
+- ~~Local Color Table~~
 - Parse all extensions
+- - ~~Graphic Control Extension~~
+- - ~~Comment Extension~~
+- - Plain Text Extension
+- - Application Extension
 - Animation and Transparency
 - Gif viewer using Tkinter
 - ...
