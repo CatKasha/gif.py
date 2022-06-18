@@ -83,8 +83,6 @@ def gif(f_path, r_html=None):
 
         # reserved in 87a and should be 0
         global_sort_flag = bool(int(buf[4]))
-        if(global_sort_flag and gif_version != "87a"):
-            print("global_sort_flag is not zero")
 
         size_of_global_table = int(buf[5:], 2)
         background_color_index = fab.read(1)[0]
@@ -92,11 +90,12 @@ def gif(f_path, r_html=None):
 
 
         #global color table
-        for n in range(2 ** (size_of_global_table + 1)):
-            temp_var = []
-            for i in range(3):
-                temp_var.append(fab.read(1)[0])
-            global_color_table.append(temp_var)
+        if(global_color_table_flag):
+            for n in range(2 ** (size_of_global_table + 1)):
+                temp_var = []
+                for i in range(3):
+                    temp_var.append(fab.read(1)[0])
+                global_color_table.append(temp_var)
 
 
         #extensions not have correct order so parce everything that can be found before moving on
