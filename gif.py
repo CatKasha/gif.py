@@ -12,7 +12,6 @@ def make_gif_data(image_height, image_width, global_color_table, index_stream):
 
 def gif(f_path, r_html=None):
     buf = None
-    temp_var = None
 
     #header
     gif_header = None
@@ -92,10 +91,9 @@ def gif(f_path, r_html=None):
         #global color table
         if(global_color_table_flag):
             for n in range(2 ** (size_of_global_table + 1)):
-                temp_var = []
+                global_color_table.append([])
                 for i in range(3):
-                    temp_var.append(fab.read(1)[0])
-                global_color_table.append(temp_var)
+                    global_color_table[n].append(fab.read(1)[0])
 
 
         #extensions not have correct order so parce everything that can be found before moving on
@@ -166,14 +164,13 @@ def gif(f_path, r_html=None):
         size_of_local_table = int(buf[5:], 2)
 
         #local color table
-        #TODO currently local_color_table overwrite global_color_talbe
+        #TODO currently local_color_table overwrites global_color_table
         if(local_color_table_flag):
             global_color_table = []
             for n in range(2 ** (size_of_local_table + 1)):
-                temp_var = []
+                global_color_table.append([])
                 for i in range(3):
-                    temp_var.append(fab.read(1)[0])
-                global_color_table.append(temp_var)
+                    global_color_table[n].append(fab.read(1)[0])
 
 
         #image data
