@@ -31,6 +31,11 @@ def gif(f_path, r_html=None):
     global_color_table = []
 
     #graphic control extension
+    disposal_method = None
+    user_input_flag = None
+    transparent_color_flag = None
+    delay_time = None
+    transparent_color_index = None
 
     #comment extension
     comment_data = None
@@ -100,51 +105,57 @@ def gif(f_path, r_html=None):
 
         #extensions not have correct order so parse everything that can be found before moving on
         buf = fab.read(1)[0]
-        while buf != 0x2C:
+        while buf == 0x21:
             #graphic control extension
-            #TODO
-            if(buf == 0x21):
-                if(fab.read(1)[0] != 0xF9):
-                    fab.seek(-1, 1)
-                else:
-                    fab.seek(5, 1)
-                    if(fab.read(1)[0] != 0x00):
-                        sys.exit("block terminator in graphic control extension not found")
-                    else:
-                        buf = fab.read(1)[0]
+            if(fab.read(1)[0] != 0xF9):
+                fab.seek(-1, 1)
+            else:
+                fab.seek(1, 1)
+
+                buf = bin(fab.read(1)[0])[2:].zfill(8)
+                disposal_method = int(buf[3:6])
+                user_input_flag = bool(int(buf[6]))
+                transparent_color_flag = bool(int(buf[7]))
+
+                delay_time = int.from_bytes(fab.read(2), byteorder="little")
+                transparent_color_index = int(fab.read(1)[0])
+
+                if(fab.read(1)[0] != 0x00):
+                    sys.exit("block terminator in graphic control extension not found")
+                
+                buf = fab.read(1)[0]
 
             #comment extension
-            if(buf == 0x21):
-                if(fab.read(1)[0] != 0xFE):
-                    fab.seek(-1, 1)
-                else:
-                    comment_data = ""
+            if(fab.read(1)[0] != 0xFE):
+                fab.seek(-1, 1)
+            else:
+                comment_data = ""
+                buf = fab.read(1)
+                while buf[0] != 0x00:
+                    comment_data += buf.decode("ascii")
                     buf = fab.read(1)
-                    while buf[0] != 0x00:
-                        comment_data += buf.decode("ascii")
-                        buf = fab.read(1)
-                    print(f"{comment_data=}")
-                    buf = fab.read(1)[0]
+                print(f"{comment_data=}")
+
+                buf = fab.read(1)[0]
 
             #plain text extension
             #TODO
 
             #application extension
             #TODO
-            if(buf == 0x21):
-                if(fab.read(1)[0] != 0xFF):
-                    fab.seek(-1, 1)
+            if(fab.read(1)[0] != 0xFF):
+                fab.seek(-1, 1)
+            else:
+                if(fab.read(1)[0] != 0x0B):
+                    sys.exit("block size in application extension is not 0x0B")
                 else:
-                    if(fab.read(1)[0] != 0x0B):
-                        sys.exit("block size in application extension is not 0x0B")
-                    else:
-                        fab.seek(11, 1)
-                        buf = fab.read(1)[0]
-                        fab.seek(buf, 1)
-                        if(fab.read(1)[0] != 0x00):
-                            sys.exit("block terminator in application extension not found")
-                        else:
-                            buf = fab.read(1)[0]
+                    fab.seek(11, 1)
+                    buf = fab.read(1)[0]
+                    fab.seek(buf, 1)
+                    if(fab.read(1)[0] != 0x00):
+                        sys.exit("block terminator in application extension not found")
+                    
+                    buf = fab.read(1)[0]
 
 
         #image descriptor
