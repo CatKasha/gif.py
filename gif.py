@@ -130,11 +130,17 @@ def gif(f_path, r_html=None):
                 fab.seek(-1, 1)
             else:
                 comment_data = ""
-                buf = fab.read(1)
-                while buf[0] != 0x00:
-                    comment_data += buf.decode("ascii")
-                    buf = fab.read(1)
-                print(f"{comment_data=}")
+                sub_block_size = fab.read(1)[0]
+                while True:
+                    sub_block = fab.read(sub_block_size)
+                    for i in range(len(sub_block)):
+                        comment_data += chr(sub_block[i])
+
+                    sub_block_size = fab.read(1)[0]
+                    if(sub_block_size == 0):
+                        break
+                
+                print("comment_data:\n" + comment_data)
 
                 buf = fab.read(1)[0]
 
