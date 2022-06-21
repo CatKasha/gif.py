@@ -263,63 +263,57 @@ def gif(f_path, r_html=None):
 
         init_code_size = code_size
         
-        buf = []
+        buf = ""
         while True:
             sub_block = fab.read(sub_block_size)
             for i in range(len(sub_block)):
-                buf.append(bin(int(sub_block[i]))[2:].zfill(8))
+                buf = bin(int(sub_block[i]))[2:].zfill(8) + buf
+
+            try:
+                while(len(buf) > code_size):
+                    current_code = int(buf[-code_size:], 2)
+                    buf = buf[:-code_size]
+                    code_stream.append(current_code)
+
+                    # only works in this position and i dont know why
+                    if(len(code_table) == ((2 ** code_size) - 1)):
+                        if (code_size < 12):
+                            code_size += 1
+
+                    if(current_code == EOI_pos):
+                        break
+
+                    if(current_code == CLR_pos):
+                        code_size = init_code_size
+                        code_table = init_code_table.copy()
+
+                        current_code = int(buf[-code_size:], 2)
+                        buf = buf[:-code_size]
+                        code_stream.append(current_code)
+                        index_stream.append(current_code)
+
+                        prev_code = current_code
+                        continue
+                    
+                    if(current_code in code_table):
+                        index_stream.append(code_table[current_code])
+                        code_table[len(code_table)] = code_table[prev_code].copy()
+                        code_table[len(code_table) - 1].append(code_table[current_code][0])
+                        prev_code = current_code
+                    else:
+                        index_stream.append(code_table[prev_code].copy())
+                        index_stream[-1].append(code_table[prev_code][0])
+                        code_table[len(code_table)] = code_table[prev_code].copy()
+                        code_table[len(code_table) - 1].append(code_table[prev_code][0])
+                        prev_code = current_code
+
+            except Exception:
+                print(len(code_table), current_code, prev_code)
+                traceback.print_exc()
 
             sub_block_size = fab.read(1)[0]
             if(sub_block_size == 0):
                 break
-
-        sub_block = None
-        buf.reverse()
-        #TODO join strings via join() or (buf = bin(int(sub_block[i]))[2:].zfill(8) + buf) is slow for some reason
-        # so we need decode image by using sub block one by one, not a whole image data in buf
-        buf = "".join(buf)
-
-        try:
-            while (len(buf) > 0):
-                current_code = int(buf[-code_size:], 2)
-                buf = buf[:-code_size]
-                code_stream.append(current_code)
-
-                # only works in this position and i dont know why
-                if(len(code_table) == ((2 ** code_size) - 1)):
-                    if (code_size < 12):
-                        code_size += 1
-
-                if(current_code == EOI_pos):
-                    break
-
-                if(current_code == CLR_pos):
-                    code_size = init_code_size
-                    code_table = init_code_table.copy()
-
-                    current_code = int(buf[-code_size:], 2)
-                    buf = buf[:-code_size]
-                    code_stream.append(current_code)
-                    index_stream.append(current_code)
-
-                    prev_code = current_code
-                    continue
-                
-                if(current_code in code_table):
-                    index_stream.append(code_table[current_code])
-                    code_table[len(code_table)] = code_table[prev_code].copy()
-                    code_table[len(code_table) - 1].append(code_table[current_code][0])
-                    prev_code = current_code
-                else:
-                    index_stream.append(code_table[prev_code].copy())
-                    index_stream[-1].append(code_table[prev_code][0])
-                    code_table[len(code_table)] = code_table[prev_code].copy()
-                    code_table[len(code_table) - 1].append(code_table[prev_code][0])
-                    prev_code = current_code
-
-        except Exception:
-            print(len(code_table), current_code, prev_code)
-            traceback.print_exc()
 
     if (r_html):
         make_gif_data(image_height, image_width, global_color_table, index_stream)
