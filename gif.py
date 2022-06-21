@@ -52,6 +52,9 @@ def gif(f_path, r_html=None):
     plain_text_data = None
 
     #application extension
+    application_identifier = None
+    application_identifier_code = None
+    application_data = None
 
     #image descriptor
     image_left_pos = None
@@ -188,20 +191,24 @@ def gif(f_path, r_html=None):
                 buf = fab.read(1)[0]
 
             #application extension
-            #TODO
             if(fab.read(1)[0] != 0xFF):
                 fab.seek(-1, 1)
             else:
-                if(fab.read(1)[0] != 0x0B):
-                    sys.exit("block size in application extension is not 0x0B")
-                else:
-                    fab.seek(11, 1)
-                    buf = fab.read(1)[0]
-                    fab.seek(buf, 1)
-                    if(fab.read(1)[0] != 0x00):
-                        sys.exit("block terminator in application extension not found")
-                    
-                    buf = fab.read(1)[0]
+                fab.seek(1, 1)
+
+                application_identifier = fab.read(8).decode("ascii")
+                application_identifier_code = fab.read(3)
+
+                application_data = b""
+                sub_block_size = fab.read(1)[0]
+                while True:
+                    application_data += fab.read(sub_block_size)
+
+                    sub_block_size = fab.read(1)[0]
+                    if(sub_block_size == 0):
+                        break
+
+                buf = fab.read(1)[0]
 
 
         #image descriptor

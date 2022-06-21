@@ -10,14 +10,14 @@ To view decoded color table and image open `index.html`
 
 ## TODO
 - ~~Local Color Table~~
-- Parse all extensions
+- ~~Parse all extensions~~
 - - ~~Graphic Control Extension~~
 - - ~~Comment Extension~~
 - - ~~Plain Text Extension~~
-- - Application Extension
+- - ~~Application Extension~~
 - Animation and Transparency
 - Implement text rendering by Plain Text Extension
-- Gif viewer using Tkinter
+- GIF viewer (using Tkinter for GUI)
 - ...
 - Rewrite everything in C
 
