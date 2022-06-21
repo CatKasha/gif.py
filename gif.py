@@ -144,9 +144,7 @@ def gif(f_path, r_html=None):
                 comment_data = ""
                 sub_block_size = fab.read(1)[0]
                 while True:
-                    sub_block = fab.read(sub_block_size)
-                    for i in range(len(sub_block)):
-                        comment_data += chr(sub_block[i])
+                    comment_data += fab.read(sub_block_size).decode("ascii")
 
                     sub_block_size = fab.read(1)[0]
                     if(sub_block_size == 0):
@@ -178,9 +176,7 @@ def gif(f_path, r_html=None):
                 plain_text_data = ""
                 sub_block_size = fab.read(1)[0]
                 while True:
-                    sub_block = fab.read(sub_block_size)
-                    for i in range(len(sub_block)):
-                        plain_text_data += chr(sub_block[i])
+                    plain_text_data += fab.read(sub_block_size).decode("ascii")
 
                     sub_block_size = fab.read(1)[0]
                     if(sub_block_size == 0):
