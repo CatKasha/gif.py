@@ -41,6 +41,15 @@ def gif(f_path, r_html=None):
     comment_data = None
 
     #plain text extension
+    text_grid_left_pos = None
+    text_grid_top_pos = None
+    text_grid_width = None
+    text_grid_height = None
+    char_cell_width = None
+    char_cell_height = None
+    text_foreground_color_index = None
+    text_background_color_index = None
+    plain_text_data = None
 
     #application extension
 
@@ -145,7 +154,38 @@ def gif(f_path, r_html=None):
                 buf = fab.read(1)[0]
 
             #plain text extension
-            #TODO
+            #TODO seems this block placed after image data and can work as image data (using delay time and render text on top past frame)
+            if(fab.read(1)[0] != 0x01):
+                fab.seek(-1, 1)
+            else:
+                fab.seek(1, 1)
+
+                text_grid_left_pos = int.from_bytes(fab.read(2), byteorder="little")
+                text_grid_top_pos = int.from_bytes(fab.read(2), byteorder="little")
+
+                text_grid_width = int.from_bytes(fab.read(2), byteorder="little")
+                text_grid_height = int.from_bytes(fab.read(2), byteorder="little")
+
+                char_cell_height = fab.read(1)[0]
+                char_cell_width = fab.read(1)[0]
+
+                text_foreground_color_index = fab.read(1)[0]
+                text_background_color_index = fab.read(1)[0]
+
+                plain_text_data = ""
+                sub_block_size = fab.read(1)[0]
+                while True:
+                    sub_block = fab.read(sub_block_size)
+                    for i in range(len(sub_block)):
+                        plain_text_data += chr(sub_block[i])
+
+                    sub_block_size = fab.read(1)[0]
+                    if(sub_block_size == 0):
+                        break
+
+                print("plain_text_data:\n" + plain_text_data)
+
+                buf = fab.read(1)[0]
 
             #application extension
             #TODO
