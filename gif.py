@@ -280,60 +280,43 @@ def gif(f_path, r_html=None):
         buf = "".join(buf)
 
         try:
-            current_code = int(buf[-code_size:], 2)
-            buf = buf[:-code_size]
-            if(current_code == CLR_pos):
-                code_stream.append(current_code)
-
+            while (len(buf) > 0):
                 current_code = int(buf[-code_size:], 2)
                 buf = buf[:-code_size]
                 code_stream.append(current_code)
-                index_stream.append(current_code)
 
-                prev_code = current_code
-
+                # only works in this position and i dont know why
                 if(len(code_table) == ((2 ** code_size) - 1)):
                     if (code_size < 12):
                         code_size += 1
 
-                while (len(buf) > 0):
+                if(current_code == EOI_pos):
+                    break
+
+                if(current_code == CLR_pos):
+                    code_size = init_code_size
+                    code_table = init_code_table.copy()
+
                     current_code = int(buf[-code_size:], 2)
                     buf = buf[:-code_size]
                     code_stream.append(current_code)
+                    index_stream.append(current_code)
 
-                    # only works in this position and i dont know why
-                    if(len(code_table) == ((2 ** code_size) - 1)):
-                        if (code_size < 12):
-                            code_size += 1
+                    prev_code = current_code
+                    continue
+                
+                if(current_code in code_table):
+                    index_stream.append(code_table[current_code])
+                    code_table[len(code_table)] = code_table[prev_code].copy()
+                    code_table[len(code_table) - 1].append(code_table[current_code][0])
+                    prev_code = current_code
+                else:
+                    index_stream.append(code_table[prev_code].copy())
+                    index_stream[-1].append(code_table[prev_code][0])
+                    code_table[len(code_table)] = code_table[prev_code].copy()
+                    code_table[len(code_table) - 1].append(code_table[prev_code][0])
+                    prev_code = current_code
 
-                    if(current_code == EOI_pos):
-                        break
-
-                    if(current_code == CLR_pos):
-                        code_size = init_code_size
-                        code_table = init_code_table.copy()
-
-                        code_stream.append(current_code)
-
-                        current_code = int(buf[-code_size:], 2)
-                        buf = buf[:-code_size]
-                        code_stream.append(current_code)
-                        index_stream.append(current_code)
-
-                        prev_code = current_code
-                        continue
-                    
-                    if(current_code in code_table):
-                        index_stream.append(code_table[current_code])
-                        code_table[len(code_table)] = code_table[prev_code].copy()
-                        code_table[len(code_table) - 1].append(code_table[current_code][0])
-                        prev_code = current_code
-                    else:
-                        index_stream.append(code_table[prev_code].copy())
-                        index_stream[-1].append(code_table[prev_code][0])
-                        code_table[len(code_table)] = code_table[prev_code].copy()
-                        code_table[len(code_table) - 1].append(code_table[prev_code][0])
-                        prev_code = current_code
         except Exception:
             print(len(code_table), current_code, prev_code)
             traceback.print_exc()
