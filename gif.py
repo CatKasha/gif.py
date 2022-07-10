@@ -12,6 +12,7 @@ def make_gif_data(image_height, image_width, global_color_table, index_stream):
 
 def gif(f_path, r_html=None):
     buf = None
+    another_buf = None
 
     #header
     gif_header = None
@@ -122,15 +123,24 @@ def gif(f_path, r_html=None):
             if(fab.read(1)[0] != 0xF9):
                 fab.seek(-1, 1)
             else:
-                fab.seek(1, 1)
+                buf = fab.read(1)[0]
+                if(buf != 4):
+                    sys.exit("block size in graphic control extension is not 4")
+                buf = fab.read(buf)
+                if(len(buf) != 4):
+                    sys.exit("size of graphic control extension is not 4")
 
-                buf = bin(fab.read(1)[0])[2:].zfill(8)
-                disposal_method = int(buf[3:6])
-                user_input_flag = bool(int(buf[6]))
-                transparent_color_flag = bool(int(buf[7]))
+                another_buf = bin(buf[:1][0])[2:].zfill(8)
+                buf = buf[1:]
 
-                delay_time = int.from_bytes(fab.read(2), byteorder="little")
-                transparent_color_index = int(fab.read(1)[0])
+                disposal_method = int(another_buf[3:6])
+                user_input_flag = bool(int(another_buf[6]))
+                transparent_color_flag = bool(int(another_buf[7]))
+
+                delay_time = int.from_bytes(buf[:2], byteorder="little")
+                buf = buf[2:]
+
+                transparent_color_index = int(buf[:1][0])
 
                 if(fab.read(1)[0] != 0x00):
                     sys.exit("block terminator in graphic control extension not found")
@@ -159,19 +169,32 @@ def gif(f_path, r_html=None):
             if(fab.read(1)[0] != 0x01):
                 fab.seek(-1, 1)
             else:
-                fab.seek(1, 1)
+                buf = fab.read(1)[0]
+                if(buf != 12):
+                    sys.exit("block size in plain text extension is not 12")
+                buf = fab.read(buf)
+                if(len(buf) != 12):
+                    sys.exit("size of plain text extension is not 12")
+                
+                text_grid_left_pos = int.from_bytes(buf[:2], byteorder="little")
+                buf = buf[2:]
+                text_grid_top_pos = int.from_bytes(buf[:2], byteorder="little")
+                buf = buf[2:]
 
-                text_grid_left_pos = int.from_bytes(fab.read(2), byteorder="little")
-                text_grid_top_pos = int.from_bytes(fab.read(2), byteorder="little")
+                text_grid_width = int.from_bytes(buf[:2], byteorder="little")
+                buf = buf[2:]
+                text_grid_height = int.from_bytes(buf[:2], byteorder="little")
+                buf = buf[2:]
 
-                text_grid_width = int.from_bytes(fab.read(2), byteorder="little")
-                text_grid_height = int.from_bytes(fab.read(2), byteorder="little")
+                char_cell_height = buf[:1]
+                buf = buf[1:]
+                char_cell_width = buf[:1]
+                buf = buf[1:]
 
-                char_cell_height = fab.read(1)[0]
-                char_cell_width = fab.read(1)[0]
-
-                text_foreground_color_index = fab.read(1)[0]
-                text_background_color_index = fab.read(1)[0]
+                text_foreground_color_index = buf[:1]
+                buf = buf[1:]
+                text_background_color_index = buf[:1]
+                buf = buf[1:]
 
                 plain_text_data = ""
                 sub_block_size = fab.read(1)[0]
@@ -190,10 +213,17 @@ def gif(f_path, r_html=None):
             if(fab.read(1)[0] != 0xFF):
                 fab.seek(-1, 1)
             else:
-                fab.seek(1, 1)
+                buf = fab.read(1)[0]
+                if(buf != 11):
+                    sys.exit("block size in application extension is not 11")
+                buf = fab.read(buf)
+                if(len(buf) != 11):
+                    sys.exit("size of application extension is not 11")
 
-                application_identifier = fab.read(8).decode("ascii")
-                application_identifier_code = fab.read(3)
+                application_identifier = buf[:8].decode("ascii")
+                buf = buf[8:]
+                application_identifier_code = buf[:3]
+                buf = buf[3:]
 
                 application_data = b""
                 sub_block_size = fab.read(1)[0]

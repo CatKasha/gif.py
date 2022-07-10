@@ -15,8 +15,10 @@ To view decoded color table and image open `index.html`
 - - ~~Comment Extension~~
 - - ~~Plain Text Extension~~
 - - ~~Application Extension~~
-- Animation and Transparency
-- Implement text rendering by Plain Text Extension
+- Animation
+- Transparency
+- Disposal Methods
+- Text rendering by Plain Text Extension
 - GIF viewer (using Tkinter for GUI)
 - ...
 - Rewrite everything in C
