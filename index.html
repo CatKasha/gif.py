@@ -13,37 +13,56 @@
 </head>
 
 <body>
-    <canvas id="color_palette" width="16" height="16"></canvas>
-    <canvas id="image_data"></canvas>
+    <span>global_color_table</span>
+    <canvas id="global_color_table" width="16" height="16"></canvas>
+
+    <span>local_color_table</span>
+    <canvas id="local_color_table" width="16" height="16"></canvas>
+
     <script src="gif_data.js"></script>
     <script>
-        let canvas_color_palette = document.getElementById("color_palette");
-        let canvas_image_data = document.getElementById("image_data");
+        let canvas_global_palette = document.getElementById("global_color_table");
+        let canvas_local_palette = document.getElementById("local_color_table");
 
-        canvas_image_data.height = image_height;
-        canvas_image_data.width = image_width;
+        // canvas_image_data.height = image_height;
+        // canvas_image_data.width = image_width;
 
-        let ctx = canvas_color_palette.getContext("2d");
-        let buf = ctx.getImageData(0, 0, canvas_color_palette.width, canvas_color_palette.height);
-        buf.data.fill(200);
-        for (let i = 0; global_color_table.length > i; i++) {
-            buf.data[i * 4 + 0] = global_color_table[i][0];
-            buf.data[i * 4 + 1] = global_color_table[i][1];
-            buf.data[i * 4 + 2] = global_color_table[i][2];
-            buf.data[i * 4 + 3] = 255;
+        if (global_color_table_flag) {
+            let ctx = canvas_global_palette.getContext("2d");
+            let buf = ctx.getImageData(0, 0, canvas_global_palette.width, canvas_global_palette.height);
+            buf.data.fill(200);
+            for (let i = 0; global_color_table.length / 3 > i; i++) {
+                buf.data[i * 4 + 0] = global_color_table[i * 3 + 0];
+                buf.data[i * 4 + 1] = global_color_table[i * 3 + 1];
+                buf.data[i * 4 + 2] = global_color_table[i * 3 + 2];
+                buf.data[i * 4 + 3] = 255;
+            }
+            ctx.putImageData(buf, 0, 0);
         }
-        ctx.putImageData(buf, 0, 0);
 
-        ctx = canvas_image_data.getContext("2d");
-        buf = ctx.getImageData(0, 0, canvas_image_data.width, canvas_image_data.height);
-        index_stream = index_stream.join().split(",");
-        for (let i = 0; index_stream.length > i; i++) {
-            buf.data[i * 4 + 0] = global_color_table[index_stream[i]][0];
-            buf.data[i * 4 + 1] = global_color_table[index_stream[i]][1];
-            buf.data[i * 4 + 2] = global_color_table[index_stream[i]][2];
-            buf.data[i * 4 + 3] = 255;
+        if (local_color_table_flag) {
+            let ctx = canvas_local_palette.getContext("2d");
+            let buf = ctx.getImageData(0, 0, canvas_local_palette.width, canvas_local_palette.height);
+            buf.data.fill(200);
+            for (let i = 0; local_color_table.length / 3 > i; i++) {
+                buf.data[i * 4 + 0] = local_color_table[i * 3 + 0];
+                buf.data[i * 4 + 1] = local_color_table[i * 3 + 1];
+                buf.data[i * 4 + 2] = local_color_table[i * 3 + 2];
+                buf.data[i * 4 + 3] = 255;
+            }
+            ctx.putImageData(buf, 0, 0);
         }
-        ctx.putImageData(buf, 0, 0);
+
+        // ctx = canvas_image_data.getContext("2d");
+        // buf = ctx.getImageData(0, 0, canvas_image_data.width, canvas_image_data.height);
+        // index_stream = index_stream.join().split(",");
+        // for (let i = 0; index_stream.length > i; i++) {
+        //     buf.data[i * 4 + 0] = global_color_table[index_stream[i]][0];
+        //     buf.data[i * 4 + 1] = global_color_table[index_stream[i]][1];
+        //     buf.data[i * 4 + 2] = global_color_table[index_stream[i]][2];
+        //     buf.data[i * 4 + 3] = 255;
+        // }
+        // ctx.putImageData(buf, 0, 0);
     </script>
 </body>
 

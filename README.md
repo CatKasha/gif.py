@@ -1,30 +1,41 @@
 # gif.py
 Attempt to create a gif decoder
 
+
+## decoder
+- [x] Header
+- [x] Logical Screen Descriptor
+- [x] Global Color Table
+- [ ] Extentions:
+- - [ ] Graphic Control Extension
+- - [ ] Comment Extension
+- - [ ] Plain Text Extension
+- - [ ] Application Extension
+- [x] Image Descriptor
+- [x] Local Color Table
+- [ ] Image Data
+
+## viewer
+- [x] Global Color Table
+- [x] Local Color Table of first image
+- [ ] First image
+- [ ] Local Color Table of other images
+- [ ] Other images
+- [ ] Animation
+- [ ] Transparency
+- [ ] Disposal Methods
+- [ ] Text rendering by Plain Text Extension
+
+
 ## Usage
-```
-gif.py path_to_gif
+```shell
+.\gif.py sample.gif
 ```
 It will create `gif_data.js` that include decoded color table and index stream of image  
 To view decoded color table and image open `index.html`
 
-## TODO
-- ~~Local Color Table~~
-- ~~Parse all extensions~~
-- - ~~Graphic Control Extension~~
-- - ~~Comment Extension~~
-- - ~~Plain Text Extension~~
-- - ~~Application Extension~~
-- Animation
-- Transparency
-- Disposal Methods
-- Text rendering by Plain Text Extension
-- GIF viewer (using Tkinter for GUI)
-- ...
-- Rewrite everything in C
 
 ## References
 GIF specification [GIF87a](https://www.w3.org/Graphics/GIF/spec-gif87.txt)  
 GIF specification [GIF89a](https://www.w3.org/Graphics/GIF/spec-gif89a.txt)  
-[What's In A GIF](https://www.matthewflickinger.com/lab/whatsinagif/)  
-^ great guide that take you through GIF89a spec and explain everything, including LZW algorithm
+[3MF Project: What's In A GIF - Bit by Byte](https://www.matthewflickinger.com/lab/whatsinagif/)

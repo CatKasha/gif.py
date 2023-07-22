@@ -1,24 +1,11 @@
-import sys, os.path, traceback
+import sys
+import os
 
-
-def make_gif_data(image_height, image_width, global_color_table, index_stream):
-    with open("gif_data.js", "w") as f:
-        gif_data = f"let {image_height = };\n"
-        gif_data += f"let {image_width = };\n"
-        gif_data += f"let {global_color_table = };\n"
-        gif_data += f"let {index_stream = };\n"
-        f.write(gif_data)
-
-
-def gif(f_path, r_html=None):
-    buf = None
-    another_buf = None
-
-    #header
+def gif(f_path, export_gif_data = None):
+    # header
     gif_header = None
-    gif_version = None
 
-    #logical screen descriptor
+    # logical screen descriptor
     logical_screen_height = None
     logical_screen_width = None
     global_color_table_flag = None
@@ -28,20 +15,20 @@ def gif(f_path, r_html=None):
     background_color_index = None
     pixel_aspect_ratio = None
 
-    #global color table
+    # global color table
     global_color_table = []
 
-    #graphic control extension
+    # graphic control extension
     disposal_method = None
     user_input_flag = None
     transparent_color_flag = None
     delay_time = None
     transparent_color_index = None
 
-    #comment extension
+    # comment extension
     comment_data = None
 
-    #plain text extension
+    # plain text extension
     text_grid_left_pos = None
     text_grid_top_pos = None
     text_grid_width = None
@@ -52,12 +39,12 @@ def gif(f_path, r_html=None):
     text_background_color_index = None
     plain_text_data = None
 
-    #application extension
+    # application extension
     application_identifier = None
     application_identifier_code = None
     application_data = None
 
-    #image descriptor
+    # image descriptor
     image_left_pos = None
     image_top_pos = None
     image_width = None
@@ -67,10 +54,10 @@ def gif(f_path, r_html=None):
     sort_flag = None
     size_of_local_table = None
 
-    #local color table
+    # local color table
     local_color_table = []
 
-    #image data
+    # image data
     lzw_minimal_code_size = None
     code_size = None
     sub_block = None
@@ -78,44 +65,51 @@ def gif(f_path, r_html=None):
     code_table = {}
     code_stream = []
     index_stream = []
-    
+
 
     with open(f_path, "rb") as fab:
-        #header
-        buf = fab.read(6).decode("ascii")
-        if (buf == "GIF87a" or buf == "GIF89a"):
-            gif_header = buf
-            gif_version = buf[3:]
-        else:
+        # header
+        gif_header = fab.read(6).decode("ascii", errors="ignore")
+        if (gif_header not in ["GIF87a", "GIF89a"]):
             sys.exit("this file is not a gif")
 
 
-        #logical screen descriptor
+        # logical screen descriptor
         logical_screen_width = int.from_bytes(fab.read(2), byteorder="little")
         logical_screen_height = int.from_bytes(fab.read(2), byteorder="little")
-        
-        buf = bin(fab.read(1)[0])[2:].zfill(8)
+
+        buf = bin(int.from_bytes(fab.read(1), byteorder="little"))[2:].zfill(8)
+
         global_color_table_flag = bool(int(buf[0]))
-
-        # in 89a spec - 1
-        color_resolution = int(buf[1:4], 2) + 1
-
-        # reserved in 87a and should be 0
-        global_sort_flag = bool(int(buf[4]))
-
+        color_resolution = int(buf[1:4], 2) - 1
+        global_sort_flag = bool(int(buf[4])) # reserved in 87a and should be 0
         size_of_global_table = int(buf[5:], 2)
-        background_color_index = fab.read(1)[0]
-        pixel_aspect_ratio = fab.read(1)[0]
+
+        background_color_index = int.from_bytes(fab.read(1), byteorder="little")
+        pixel_aspect_ratio = int.from_bytes(fab.read(1), byteorder="little")
 
 
-        #global color table
-        if(global_color_table_flag):
-            for n in range(2 ** (size_of_global_table + 1)):
-                global_color_table.append([])
-                for i in range(3):
-                    global_color_table[n].append(fab.read(1)[0])
+        # global color table
+        if (global_color_table_flag):
+            for i in range((2 ** (size_of_global_table + 1)) * 3):
+                global_color_table.append(int.from_bytes(fab.read(1), byteorder="little"))
 
 
+        # NOTE loop starts here
+
+        # skip extentions
+        buf = fab.read(1)
+        while buf != b"\x00":
+            if (buf == b"\x21"):
+                print("skip extention:", fab.read(1))
+                while buf != 0:
+                    buf = int.from_bytes(fab.read(1), byteorder="little")
+                    fab.seek(buf, 1)
+                buf = fab.read(1)
+            else:
+                break
+
+        """
         #extensions not have correct order so parse everything that can be found before moving on
         buf = fab.read(1)[0]
         while buf == 0x21:
@@ -235,41 +229,33 @@ def gif(f_path, r_html=None):
                         break
 
                 buf = fab.read(1)[0]
+        """
 
 
-        #image descriptor
-        if(buf != 0x2C):
+        # image descriptor
+        if (buf != b"\x2c"):
             sys.exit("image separator is not 0x2C")
 
         image_left_position = int.from_bytes(fab.read(2), byteorder="little")
         image_top_position = int.from_bytes(fab.read(2), byteorder="little")
-
         image_width = int.from_bytes(fab.read(2), byteorder="little")
-        if(image_width > logical_screen_width):
-            sys.exit("image_width bigger than logical_screen_width")
-
         image_height = int.from_bytes(fab.read(2), byteorder="little")
-        if(image_height > logical_screen_height):
-            sys.exit("image_height bigger than logical_screen_height")
 
-        buf = bin(fab.read(1)[0])[2:].zfill(8)
+        buf = bin(int.from_bytes(fab.read(1), byteorder="little"))[2:].zfill(8)
 
         local_color_table_flag = bool(int(buf[0]))
         interlace_flag = bool(int(buf[1]))
         sort_flag = bool(int(buf[2]))
         size_of_local_table = int(buf[5:], 2)
 
-        #local color table
-        #TODO currently local_color_table overwrites global_color_table
-        if(local_color_table_flag):
-            global_color_table = []
-            for n in range(2 ** (size_of_local_table + 1)):
-                global_color_table.append([])
-                for i in range(3):
-                    global_color_table[n].append(fab.read(1)[0])
 
+        # local color table
+        if (local_color_table):
+            for i in range((2 ** (size_of_local_table + 1)) * 3):
+                local_color_table.append(int.from_bytes(fab.read(1), byteorder="little"))
 
-        #image data
+        """
+        # image data
         lzw_minimal_code_size = fab.read(1)[0]
         code_size = lzw_minimal_code_size
         if(code_size > 12):
@@ -299,75 +285,62 @@ def gif(f_path, r_html=None):
             for i in range(len(sub_block)):
                 buf = bin(int(sub_block[i]))[2:].zfill(8) + buf
 
-            try:
-                while(len(buf) > code_size):
+            while(len(buf) > code_size):
+                current_code = int(buf[-code_size:], 2)
+                buf = buf[:-code_size]
+                code_stream.append(current_code)
+
+                # only works in this position and i dont know why
+                if(len(code_table) == ((2 ** code_size) - 1)):
+                    if (code_size < 12):
+                        code_size += 1
+
+                if(current_code == EOI_pos):
+                    break
+
+                if(current_code == CLR_pos):
+                    code_size = init_code_size
+                    code_table = init_code_table.copy()
+
                     current_code = int(buf[-code_size:], 2)
                     buf = buf[:-code_size]
                     code_stream.append(current_code)
+                    index_stream.append(current_code)
 
-                    # only works in this position and i dont know why
-                    if(len(code_table) == ((2 ** code_size) - 1)):
-                        if (code_size < 12):
-                            code_size += 1
-
-                    if(current_code == EOI_pos):
-                        break
-
-                    if(current_code == CLR_pos):
-                        code_size = init_code_size
-                        code_table = init_code_table.copy()
-
-                        current_code = int(buf[-code_size:], 2)
-                        buf = buf[:-code_size]
-                        code_stream.append(current_code)
-                        index_stream.append(current_code)
-
-                        prev_code = current_code
-                        continue
-                    
-                    if(current_code in code_table):
-                        index_stream.append(code_table[current_code])
-                        code_table[len(code_table)] = code_table[prev_code].copy()
-                        code_table[len(code_table) - 1].append(code_table[current_code][0])
-                        prev_code = current_code
-                    else:
-                        index_stream.append(code_table[prev_code].copy())
-                        index_stream[-1].append(code_table[prev_code][0])
-                        code_table[len(code_table)] = code_table[prev_code].copy()
-                        code_table[len(code_table) - 1].append(code_table[prev_code][0])
-                        prev_code = current_code
-
-            except Exception:
-                print(len(code_table), current_code, prev_code)
-                traceback.print_exc()
+                    prev_code = current_code
+                    continue
+                
+                if(current_code in code_table):
+                    index_stream.append(code_table[current_code])
+                    code_table[len(code_table)] = code_table[prev_code].copy()
+                    code_table[len(code_table) - 1].append(code_table[current_code][0])
+                    prev_code = current_code
+                else:
+                    index_stream.append(code_table[prev_code].copy())
+                    index_stream[-1].append(code_table[prev_code][0])
+                    code_table[len(code_table)] = code_table[prev_code].copy()
+                    code_table[len(code_table) - 1].append(code_table[prev_code][0])
+                    prev_code = current_code
 
             sub_block_size = fab.read(1)[0]
             if(sub_block_size == 0):
                 break
+        """
 
-    if (r_html):
-        make_gif_data(image_height, image_width, global_color_table, index_stream)
+    if (export_gif_data):
+        with open("gif_data.js", "w") as f:
+            gif_data =  f"let global_color_table_flag = {int(global_color_table_flag)};\n"
+            gif_data += f"let {global_color_table = };\n"
+            gif_data += f"let local_color_table_flag = {int(local_color_table_flag)};\n"
+            gif_data += f"let {local_color_table = };\n"
+            f.write(gif_data)
+
 
 def main():
-    print(sys.argv)
-    
-    """
-    r_html = False
-    if(len(sys.argv) == 3):
-        if(sys.argv[1] == "-r"):
-            r_html = True
-
-        f = sys.argv[2]
-        if (os.path.isfile(f)):
-            gif(f, r_html)
-        else:
-            sys.exit("given path is not a file")
-    """
-    
     if(len(sys.argv) == 2):
-        f = sys.argv[1]
-        if (os.path.isfile(f)):
-            gif(f, True)
+        file_path = sys.argv[1]
+        if (os.path.isfile(file_path)):
+            gif(file_path, True)
         else:
             sys.exit("given path is not a file")
 
