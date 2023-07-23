@@ -19,7 +19,7 @@ Attempt to create a gif decoder
 - [x] Global Color Table
 - [x] Local Color Table of first image
 - [ ] First image
-- [ ] Local Color Table of other images
+- [x] Local Color Table of other images
 - [ ] Other images
 - [ ] Animation
 - [ ] Transparency
@@ -32,7 +32,7 @@ Attempt to create a gif decoder
 .\gif.py sample.gif
 ```
 It will create `gif_data.js` that include decoded color table and index stream of image  
-To view decoded color table and image open `index.html`
+To view decoded color table and image open `viewer.html`
 
 
 ## References
