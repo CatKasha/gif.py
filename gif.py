@@ -68,6 +68,7 @@ def gif(f_path, export_gif_data = None):
 
     # etc
     frames = 0
+    delays = []
     local_color_table_flags = []
     local_color_tables = []
 
@@ -100,143 +101,112 @@ def gif(f_path, export_gif_data = None):
 
 
         buf = fab.read(1)
+        # x3B end of file
         while buf != b"\x3B":
+
             # skip extentions
-            while buf != b"\x00":
-                if (buf == b"\x21"):
-                    print("skip extention:", fab.read(1))
-                    while buf != 0:
-                        buf = int.from_bytes(fab.read(1), byteorder="little")
-                        fab.seek(buf, 1)
-                    buf = fab.read(1)
-                else:
-                    break
+            # while buf != b"\x00":
+            #     if (buf == b"\x21"):
+            #         print("skip extention:", fab.read(1))
+            #         while buf != 0:
+            #             buf = int.from_bytes(fab.read(1), byteorder="little")
+            #             fab.seek(buf, 1)
+            #         buf = fab.read(1)
+            #     else:
+            #         break
 
-            """
-            #extensions not have correct order so parse everything that can be found before moving on
-            buf = fab.read(1)[0]
-            while buf == 0x21:
-                #graphic control extension
-                if(fab.read(1)[0] != 0xF9):
-                    fab.seek(-1, 1)
-                else:
-                    buf = fab.read(1)[0]
-                    if(buf != 4):
+            while buf == b"\x21":
+                buf = fab.read(1)
+
+                # graphic control extension
+                if (buf == b"\xF9"):
+                    buf = int.from_bytes(fab.read(1), byteorder="little")
+                    if (buf != 4):
                         sys.exit("block size in graphic control extension is not 4")
-                    buf = fab.read(buf)
-                    if(len(buf) != 4):
-                        sys.exit("size of graphic control extension is not 4")
 
-                    another_buf = bin(buf[:1][0])[2:].zfill(8)
-                    buf = buf[1:]
+                    buf = fab.read(buf)
+
+                    another_buf = bin(int.from_bytes(buf[0:1], byteorder="little"))[2:].zfill(8)
 
                     disposal_method = int(another_buf[3:6])
                     user_input_flag = bool(int(another_buf[6]))
                     transparent_color_flag = bool(int(another_buf[7]))
 
-                    delay_time = int.from_bytes(buf[:2], byteorder="little")
-                    buf = buf[2:]
+                    delay_time = int.from_bytes(buf[1:2], byteorder="little")
 
-                    transparent_color_index = int(buf[:1][0])
-
-                    if(fab.read(1)[0] != 0x00):
+                    transparent_color_index = int.from_bytes(buf[2:], byteorder="little")
+                    if (fab.read(1) != b"\x00"):
                         sys.exit("block terminator in graphic control extension not found")
-                    
-                    buf = fab.read(1)[0]
 
-                #comment extension
-                if(fab.read(1)[0] != 0xFE):
-                    fab.seek(-1, 1)
-                else:
+                    buf = fab.read(1)
+
+                # comment extension
+                if (buf == b"\xFE"):
                     comment_data = ""
-                    sub_block_size = fab.read(1)[0]
-                    while True:
-                        comment_data += fab.read(sub_block_size).decode("ascii")
+                    sub_block_size = int.from_bytes(fab.read(1), byteorder="little")
+                    while sub_block_size != 0:
+                        comment_data += fab.read(sub_block_size).decode("ascii", errors="ignore")
+                        sub_block_size = int.from_bytes(fab.read(1), byteorder="little")
 
-                        sub_block_size = fab.read(1)[0]
-                        if(sub_block_size == 0):
-                            break
-                    
                     print("comment_data:\n" + comment_data)
 
-                    buf = fab.read(1)[0]
+                    buf = fab.read(1)
 
-                #plain text extension
-                #TODO seems this block placed after image data and can work as image data (using delay time and render text on top past frame)
-                if(fab.read(1)[0] != 0x01):
-                    fab.seek(-1, 1)
-                else:
-                    buf = fab.read(1)[0]
-                    if(buf != 12):
+                # plain text extension
+                # TODO seems this block placed after image data and can work as image data (using delay time and render text on top past frame)
+                if (buf == b"\x01"):
+                    buf = int.from_bytes(fab.read(1), byteorder="little")
+                    if (buf != 12):
                         sys.exit("block size in plain text extension is not 12")
+
                     buf = fab.read(buf)
-                    if(len(buf) != 12):
-                        sys.exit("size of plain text extension is not 12")
-                    
+
                     text_grid_left_pos = int.from_bytes(buf[:2], byteorder="little")
-                    buf = buf[2:]
-                    text_grid_top_pos = int.from_bytes(buf[:2], byteorder="little")
-                    buf = buf[2:]
+                    text_grid_top_pos = int.from_bytes(buf[2:4], byteorder="little")
 
-                    text_grid_width = int.from_bytes(buf[:2], byteorder="little")
-                    buf = buf[2:]
-                    text_grid_height = int.from_bytes(buf[:2], byteorder="little")
-                    buf = buf[2:]
+                    text_grid_width = int.from_bytes(buf[4:6], byteorder="little")
+                    text_grid_height = int.from_bytes(buf[6:8], byteorder="little")
 
-                    char_cell_height = buf[:1]
-                    buf = buf[1:]
-                    char_cell_width = buf[:1]
-                    buf = buf[1:]
+                    char_cell_height = buf[8:9]
+                    char_cell_width = buf[9:10]
 
-                    text_foreground_color_index = buf[:1]
-                    buf = buf[1:]
-                    text_background_color_index = buf[:1]
-                    buf = buf[1:]
+                    text_foreground_color_index = buf[10:11]
+                    text_background_color_index = buf[11:12]
 
                     plain_text_data = ""
-                    sub_block_size = fab.read(1)[0]
-                    while True:
-                        plain_text_data += fab.read(sub_block_size).decode("ascii")
-
-                        sub_block_size = fab.read(1)[0]
-                        if(sub_block_size == 0):
-                            break
+                    sub_block_size = int.from_bytes(fab.read(1), byteorder="little")
+                    while sub_block_size != 0:
+                        plain_text_data += fab.read(sub_block_size).decode("ascii", errors="ignore")
+                        sub_block_size = int.from_bytes(fab.read(1), byteorder="little")
 
                     print("plain_text_data:\n" + plain_text_data)
 
-                    buf = fab.read(1)[0]
+                    buf = fab.read(1)
 
-                #application extension
-                if(fab.read(1)[0] != 0xFF):
-                    fab.seek(-1, 1)
-                else:
-                    buf = fab.read(1)[0]
-                    if(buf != 11):
+                # application extension
+                if (buf == b"\xFF"):
+                    buf = int.from_bytes(fab.read(1), byteorder="little")
+                    if (buf != 11):
                         sys.exit("block size in application extension is not 11")
-                    buf = fab.read(buf)
-                    if(len(buf) != 11):
-                        sys.exit("size of application extension is not 11")
 
-                    application_identifier = buf[:8].decode("ascii")
-                    buf = buf[8:]
-                    application_identifier_code = buf[:3]
-                    buf = buf[3:]
+                    buf = fab.read(buf)
+
+                    application_identifier = buf[:8].decode("ascii", errors="ignore")
+                    application_identifier_code = buf[8:]
 
                     application_data = b""
-                    sub_block_size = fab.read(1)[0]
-                    while True:
+                    sub_block_size = int.from_bytes(fab.read(1), byteorder="little")
+                    while sub_block_size != 0:
                         application_data += fab.read(sub_block_size)
+                        sub_block_size = int.from_bytes(fab.read(1), byteorder="little")
 
-                        sub_block_size = fab.read(1)[0]
-                        if(sub_block_size == 0):
-                            break
+                    buf = fab.read(1)
 
-                    buf = fab.read(1)[0]
-            """
-
+                if (buf == b"\x2C"):
+                    break
 
             # image descriptor
-            if (buf != b"\x2c"):
+            if (buf != b"\x2C"):
                 sys.exit("image separator is not 0x2C")
 
             image_left_position = int.from_bytes(fab.read(2), byteorder="little")
@@ -254,6 +224,7 @@ def gif(f_path, export_gif_data = None):
 
             # local color table
             if (local_color_table_flag):
+                local_color_table = []
                 for i in range((2 ** (size_of_local_table + 1)) * 3):
                     local_color_table.append(int.from_bytes(fab.read(1), byteorder="little"))
             

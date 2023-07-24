@@ -6,11 +6,11 @@ Attempt to create a gif decoder
 - [x] Header
 - [x] Logical Screen Descriptor
 - [x] Global Color Table
-- [ ] Extentions:
-- - [ ] Graphic Control Extension
-- - [ ] Comment Extension
-- - [ ] Plain Text Extension
-- - [ ] Application Extension
+- [x] Extentions:
+- - [x] Graphic Control Extension
+- - [x] Comment Extension
+- - [x] Plain Text Extension
+- - [x] Application Extension
 - [x] Image Descriptor
 - [x] Local Color Table
 - [ ] Image Data
