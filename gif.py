@@ -22,7 +22,7 @@ def gif(f_path, export_gif_data = None):
     disposal_method = None
     user_input_flag = None
     transparent_color_flag = None
-    delay_time = None
+    delay_time = 0
     transparent_color_index = None
 
     # comment extension
@@ -68,9 +68,13 @@ def gif(f_path, export_gif_data = None):
 
     # etc
     frames = 0
-    delays = []
     local_color_table_flags = []
     local_color_tables = []
+    image_pos = []
+    image_size = []
+    delays = []
+    index_streams = []
+
 
     with open(f_path, "rb") as fab:
         # header
@@ -117,6 +121,7 @@ def gif(f_path, export_gif_data = None):
 
             while buf == b"\x21":
                 buf = fab.read(1)
+                #print(buf)
 
                 # graphic control extension
                 if (buf == b"\xF9"):
@@ -205,12 +210,17 @@ def gif(f_path, export_gif_data = None):
                 if (buf == b"\x2C"):
                     break
 
+            # end of file
+            # i had one gif thats ends with comment extentions
+            if (buf == b"\x3B"):
+                break
+
             # image descriptor
             if (buf != b"\x2C"):
                 sys.exit("image separator is not 0x2C")
 
-            image_left_position = int.from_bytes(fab.read(2), byteorder="little")
-            image_top_position = int.from_bytes(fab.read(2), byteorder="little")
+            image_left_pos = int.from_bytes(fab.read(2), byteorder="little")
+            image_top_pos = int.from_bytes(fab.read(2), byteorder="little")
             image_width = int.from_bytes(fab.read(2), byteorder="little")
             image_height = int.from_bytes(fab.read(2), byteorder="little")
 
@@ -227,98 +237,117 @@ def gif(f_path, export_gif_data = None):
                 local_color_table = []
                 for i in range((2 ** (size_of_local_table + 1)) * 3):
                     local_color_table.append(int.from_bytes(fab.read(1), byteorder="little"))
+
+            # skip image data
+            # frames += 1
+            # print("skip image", frames)
+            # fab.seek(1, 1)
+            # block_size = int.from_bytes(fab.read(1), byteorder="little")
+
+            # while block_size != 0:
+            #     fab.seek(block_size, 1)
+            #     block_size = int.from_bytes(fab.read(1), byteorder="little")
+
+            # image data
+            lzw_minimal_code_size = int.from_bytes(fab.read(1), byteorder="little")
+
+            color_table_size = 0
+            if (local_color_table_flag):
+                color_table_size = 2 ** (size_of_local_table + 1)
+            else:
+                color_table_size = 2 ** (size_of_global_table + 1)
+
+            image_data = ""
+            sub_block_size = int.from_bytes(fab.read(1), byteorder="little")
+            while sub_block_size != 0:
+                for i in range(sub_block_size):
+                    image_data = bin(int.from_bytes(fab.read(1), byteorder="little"))[2:].zfill(8) + image_data
+                sub_block_size = int.from_bytes(fab.read(1), byteorder="little")
+
+            #print(image_data)
+            #print(color_table_size, lzw_minimal_code_size)
+
+            CLR_pos = 2 ** lzw_minimal_code_size
+            EOI_pos = CLR_pos + 1
             
+            code_table = {}
+            code_stream = []
+            index_stream = []
+
+            code_size = lzw_minimal_code_size + 1
+            init = False
+            while True:
+                #print(image_data[-code_size:], int(image_data[-code_size:], 2))
+                current_code = int(image_data[-code_size:], 2)
+                image_data = image_data[:-code_size]
+                code_stream.append(current_code)
+
+                #print(len(code_table), 2 ** code_size - 1)
+
+                if (init):
+                    index_stream.append(code_table[current_code])
+                    init = False
+                    continue
+
+                if (current_code == EOI_pos):
+                    break
+
+                if (current_code == CLR_pos):
+                    code_table = {}
+                    for i in range(color_table_size):
+                        code_table[i] = ([i])
+
+                    code_table[CLR_pos] = ("CLR")
+                    code_table[EOI_pos] = ("EOI")
+                    code_size = lzw_minimal_code_size + 1
+                    init = True
+                    continue
+                
+                if (len(code_table) == 2 ** code_size - 1):
+                    if (code_size >= 12):
+                        code_size = 12
+                    else:
+                        code_size += 1
+
+                # prev code
+                # code_stream[-2]
+
+                if(current_code in code_table):
+                    index_stream.append(code_table[current_code])
+                    code_table[len(code_table)] = code_table[code_stream[-2]].copy()
+                    code_table[len(code_table) - 1].append(code_table[current_code][0])
+                else:
+                    index_stream.append(code_table[code_stream[-2]].copy())
+                    index_stream[-1].append(code_table[code_stream[-2]][0])
+                    code_table[len(code_table)] = code_table[code_stream[-2]].copy()
+                    code_table[len(code_table) - 1].append(code_table[code_stream[-2]][0])
+
+            frames += 1
+            print("frame:", frames)
+
             local_color_table_flags.append(int(local_color_table_flag))
             if (local_color_table_flag):
                 local_color_tables.append(local_color_table)
             else:
                 local_color_tables.append(0)
 
-            # skip image data
-            frames += 1
-            print("skip image", frames)
-            fab.seek(1, 1)
-            block_size = int.from_bytes(fab.read(1), byteorder="little")
+            delays.append(delay_time)
 
-            while block_size != 0:
-                fab.seek(block_size, 1)
-                block_size = int.from_bytes(fab.read(1), byteorder="little")
+            image_pos.append([image_left_pos, image_top_pos])
+            image_size.append([image_width, image_height])
+
+            #print(index_stream)
+
+            buf = []
+            for i in range(len(index_stream)):
+                for b in range (len(index_stream[i])):
+                    buf.append(index_stream[i][b])
+
+            index_streams.append(buf)
+            #print(index_streams)
 
             # for the next loop
             buf = fab.read(1)
-
-            """
-            # image data
-            lzw_minimal_code_size = fab.read(1)[0]
-            code_size = lzw_minimal_code_size
-            if(code_size > 12):
-                code_size = 12
-
-            sub_block_size = fab.read(1)[0]
-
-            for i in range(len(global_color_table)):
-                code_table[i] = [i]
-
-            code_table[len(code_table)] = "CLR"
-            code_table[len(code_table)] = "EOI"
-
-            CLR_pos = len(code_table) - 2
-            EOI_pos = len(code_table) - 1
-
-            init_code_table = code_table.copy()
-
-            if(len(code_table) > ((2 ** code_size))):
-                code_size += 1
-
-            init_code_size = code_size
-            
-            buf = ""
-            while True:
-                sub_block = fab.read(sub_block_size)
-                for i in range(len(sub_block)):
-                    buf = bin(int(sub_block[i]))[2:].zfill(8) + buf
-
-                while(len(buf) > code_size):
-                    current_code = int(buf[-code_size:], 2)
-                    buf = buf[:-code_size]
-                    code_stream.append(current_code)
-
-                    # only works in this position and i dont know why
-                    if(len(code_table) == ((2 ** code_size) - 1)):
-                        if (code_size < 12):
-                            code_size += 1
-
-                    if(current_code == EOI_pos):
-                        break
-
-                    if(current_code == CLR_pos):
-                        code_size = init_code_size
-                        code_table = init_code_table.copy()
-
-                        current_code = int(buf[-code_size:], 2)
-                        buf = buf[:-code_size]
-                        code_stream.append(current_code)
-                        index_stream.append(current_code)
-
-                        prev_code = current_code
-                        continue
-                    
-                    if(current_code in code_table):
-                        index_stream.append(code_table[current_code])
-                        code_table[len(code_table)] = code_table[prev_code].copy()
-                        code_table[len(code_table) - 1].append(code_table[current_code][0])
-                        prev_code = current_code
-                    else:
-                        index_stream.append(code_table[prev_code].copy())
-                        index_stream[-1].append(code_table[prev_code][0])
-                        code_table[len(code_table)] = code_table[prev_code].copy()
-                        code_table[len(code_table) - 1].append(code_table[prev_code][0])
-                        prev_code = current_code
-
-                sub_block_size = fab.read(1)[0]
-                if(sub_block_size == 0):
-                    break
-            """
 
     if (export_gif_data):
         with open("gif_data.js", "w") as f:
@@ -329,6 +358,10 @@ def gif(f_path, export_gif_data = None):
             gif_data += f"let {frames = }\n"
             gif_data += f"let {local_color_table_flags = };\n"
             gif_data += f"let {local_color_tables = };\n"
+            gif_data += f"let {delays = };\n"
+            gif_data += f"let {image_pos = };\n"
+            gif_data += f"let {image_size = };\n"
+            gif_data += f"let {index_streams = };\n"
             f.write(gif_data)
 
 

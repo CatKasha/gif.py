@@ -7,8 +7,12 @@
         canvas {
             border: gray solid 1px;
             image-rendering: pixelated;
-            min-width: 400px;
+            min-width: 200px;
             margin: 2px
+        }
+
+        canvas.palette {
+            min-width: 400px;
         }
 
         .images {
@@ -21,7 +25,7 @@
 <body>
     <div class="global_palette">
         <div>global_color_table</div>
-        <canvas id="global_color_table" width="16" height="16"></canvas>
+        <canvas class="palette" id="global_color_table" width="16" height="16"></canvas>
     </div>
     <div class="images">
         <div>local_color_table</div>
@@ -49,7 +53,7 @@
 
         for (let current_frame = 0; frames > current_frame; current_frame++) {
             let canvas_local_palette = document.createElement("canvas");
-            canvas_local_palette.classList = current_frame;
+            canvas_local_palette.className = "palette";
             canvas_local_palette.width = 16;
             canvas_local_palette.height = 16;
 
@@ -71,22 +75,26 @@
 
             let image = document.createElement("canvas");
             image.className = current_frame;
-            image.width = logical_screen_height;
-            image.height = logical_screen_width;
+            image.width = logical_screen_width;
+            image.height = logical_screen_height;
+
+            ctx = image.getContext("2d");
+            buf = ctx.getImageData(image_pos[current_frame][0], image_pos[current_frame][1],
+                image_size[current_frame][0], image_size[current_frame][1]);
+            for (let i = 0; index_streams[current_frame].length > i; i++) {
+                console.log(i);
+                console.log(global_color_table, index_streams[current_frame][i])
+                buf.data[i * 4 + 0] = global_color_table[index_streams[current_frame][i] * 3 + 0];
+                buf.data[i * 4 + 1] = global_color_table[index_streams[current_frame][i] * 3 + 1];
+                buf.data[i * 4 + 2] = global_color_table[index_streams[current_frame][i] * 3 + 2];
+                buf.data[i * 4 + 3] = 255;
+            }
+
+
+            ctx.putImageData(buf, image_pos[current_frame][0], image_pos[current_frame][1]);
 
             div_images.appendChild(image);
         }
-
-        // ctx = canvas_image_data.getContext("2d");
-        // buf = ctx.getImageData(0, 0, canvas_image_data.width, canvas_image_data.height);
-        // index_stream = index_stream.join().split(",");
-        // for (let i = 0; index_stream.length > i; i++) {
-        //     buf.data[i * 4 + 0] = global_color_table[index_stream[i]][0];
-        //     buf.data[i * 4 + 1] = global_color_table[index_stream[i]][1];
-        //     buf.data[i * 4 + 2] = global_color_table[index_stream[i]][2];
-        //     buf.data[i * 4 + 3] = 255;
-        // }
-        // ctx.putImageData(buf, 0, 0);
     </script>
 </body>
 

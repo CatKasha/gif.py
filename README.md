@@ -13,14 +13,14 @@ Attempt to create a gif decoder
 - - [x] Application Extension
 - [x] Image Descriptor
 - [x] Local Color Table
-- [ ] Image Data
+- [x] Image Data (brakes with this gif https://commons.wikimedia.org/wiki/File:SmallFullColourGIF.gif)
 
 ## viewer
 - [x] Global Color Table
 - [x] Local Color Table of first image
-- [ ] First image
+- [x] First image
 - [x] Local Color Table of other images
-- [ ] Other images
+- [x] Other images
 - [ ] Animation
 - [ ] Transparency
 - [ ] Disposal Methods
