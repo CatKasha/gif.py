@@ -4,6 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <style>
+        body {
+            background-color: lightgrey;
+        }
+
         canvas {
             border: gray solid 1px;
             image-rendering: pixelated;
@@ -57,7 +61,7 @@
             canvas_local_palette.width = 16;
             canvas_local_palette.height = 16;
 
-            if (local_color_table_flags[current_frame]) {
+            if (local_color_tables[current_frame] !== -1) {
                 let ctx = canvas_local_palette.getContext("2d");
                 let buf = ctx.getImageData(0, 0, canvas_local_palette.width, canvas_local_palette.height);
                 buf.data.fill(200);
@@ -82,8 +86,9 @@
             buf = ctx.getImageData(image_pos[current_frame][0], image_pos[current_frame][1],
                 image_size[current_frame][0], image_size[current_frame][1]);
             for (let i = 0; index_streams[current_frame].length > i; i++) {
-                console.log(i);
-                console.log(global_color_table, index_streams[current_frame][i])
+                if (transparent_color_indexs[current_frame] === index_streams[current_frame][i]) {
+                    continue
+                }
                 buf.data[i * 4 + 0] = global_color_table[index_streams[current_frame][i] * 3 + 0];
                 buf.data[i * 4 + 1] = global_color_table[index_streams[current_frame][i] * 3 + 1];
                 buf.data[i * 4 + 2] = global_color_table[index_streams[current_frame][i] * 3 + 2];

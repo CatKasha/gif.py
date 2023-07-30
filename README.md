@@ -13,7 +13,7 @@ Attempt to create a gif decoder
 - - [x] Application Extension
 - [x] Image Descriptor
 - [x] Local Color Table
-- [x] Image Data (brakes with this gif https://commons.wikimedia.org/wiki/File:SmallFullColourGIF.gif)
+- [ ] Image Data (kinda works)
 
 ## viewer
 - [x] Global Color Table
@@ -22,7 +22,7 @@ Attempt to create a gif decoder
 - [x] Local Color Table of other images
 - [x] Other images
 - [ ] Animation
-- [ ] Transparency
+- [x] Transparency
 - [ ] Disposal Methods
 - [ ] Text rendering by Plain Text Extension
 

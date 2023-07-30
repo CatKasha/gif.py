@@ -68,10 +68,10 @@ def gif(f_path, export_gif_data = None):
 
     # etc
     frames = 0
-    local_color_table_flags = []
     local_color_tables = []
     image_pos = []
     image_size = []
+    transparent_color_indexs = []
     delays = []
     index_streams = []
 
@@ -139,7 +139,7 @@ def gif(f_path, export_gif_data = None):
 
                     delay_time = int.from_bytes(buf[1:2], byteorder="little")
 
-                    transparent_color_index = int.from_bytes(buf[2:], byteorder="little")
+                    transparent_color_index = int.from_bytes(buf[2:], byteorder="big")
                     if (fab.read(1) != b"\x00"):
                         sys.exit("block terminator in graphic control extension not found")
 
@@ -325,11 +325,15 @@ def gif(f_path, export_gif_data = None):
             frames += 1
             print("frame:", frames)
 
-            local_color_table_flags.append(int(local_color_table_flag))
             if (local_color_table_flag):
                 local_color_tables.append(local_color_table)
             else:
-                local_color_tables.append(0)
+                local_color_tables.append(-1)
+
+            if (transparent_color_flag):
+                transparent_color_indexs.append(transparent_color_index)
+            else:
+                transparent_color_indexs.append(-1)
 
             delays.append(delay_time)
 
@@ -356,8 +360,8 @@ def gif(f_path, export_gif_data = None):
             gif_data += f"let global_color_table_flag = {int(global_color_table_flag)};\n"
             gif_data += f"let {global_color_table = };\n"
             gif_data += f"let {frames = }\n"
-            gif_data += f"let {local_color_table_flags = };\n"
             gif_data += f"let {local_color_tables = };\n"
+            gif_data += f"let {transparent_color_indexs = };\n"
             gif_data += f"let {delays = };\n"
             gif_data += f"let {image_pos = };\n"
             gif_data += f"let {image_size = };\n"
