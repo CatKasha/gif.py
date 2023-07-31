@@ -68,9 +68,11 @@ def gif(f_path, export_gif_data = None):
 
     # etc
     frames = 0
+    background_color_indexs = []
     local_color_tables = []
     image_pos = []
     image_size = []
+    disposal_methods = []
     transparent_color_indexs = []
     delays = []
     index_streams = []
@@ -325,10 +327,17 @@ def gif(f_path, export_gif_data = None):
             frames += 1
             print("frame:", frames)
 
+            if (global_color_table_flag):
+                background_color_indexs.append(background_color_index)
+            else:
+                background_color_indexs.append(-1)
+
             if (local_color_table_flag):
                 local_color_tables.append(local_color_table)
             else:
                 local_color_tables.append(-1)
+
+            disposal_methods.append(disposal_method)
 
             if (transparent_color_flag):
                 transparent_color_indexs.append(transparent_color_index)
@@ -360,7 +369,9 @@ def gif(f_path, export_gif_data = None):
             gif_data += f"let global_color_table_flag = {int(global_color_table_flag)};\n"
             gif_data += f"let {global_color_table = };\n"
             gif_data += f"let {frames = }\n"
+            gif_data += f"let {background_color_indexs = }\n"
             gif_data += f"let {local_color_tables = };\n"
+            gif_data += f"let {disposal_methods = };\n"
             gif_data += f"let {transparent_color_indexs = };\n"
             gif_data += f"let {delays = };\n"
             gif_data += f"let {image_pos = };\n"

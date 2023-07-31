@@ -21,8 +21,9 @@ Attempt to create a gif decoder
 - [x] First image
 - [x] Local Color Table of other images
 - [x] Other images
-- [ ] Animation
-- [x] Transparency
+- [x] Animation
+- [ ] Background fill with Background Color
+- [x] Ignore Transparency Color
 - [ ] Disposal Methods
 - [ ] Text rendering by Plain Text Extension
 
