@@ -6,100 +6,204 @@
     <style>
         body {
             background-color: lightgrey;
+            font-family: Arial, sans-serif;
+            display: flex;
+        }
+
+        .inline {
+            display: flex;
+            align-items: baseline;
         }
 
         canvas {
             border: gray solid 1px;
             image-rendering: pixelated;
-            min-width: 200px;
-            margin: 2px
         }
 
-        canvas.palette {
-            min-width: 400px;
+        .palette {
+            min-width: 300px;
+            image-rendering: pixelated;
         }
 
-        .images {
-            display: grid;
-            grid-template-columns: repeat(2, min-content);
+        .viewer {
+            min-width: 600px;
+            padding-right: 50px;
+        }
+
+        .controls>div {
+            padding-bottom: 20px;
         }
     </style>
 </head>
 
 <body>
-    <div class="global_palette">
-        <div>global_color_table</div>
-        <canvas class="palette" id="global_color_table" width="16" height="16"></canvas>
+    <div class="viewer">
+        <canvas id="image"></canvas>
     </div>
-    <div class="images">
-        <div>local_color_table</div>
-        <div>image</div>
+
+    <div class="controls">
+        <div>
+            <input id="zoom_reset" type="button" value="reset zoom">
+            <input id="zoom" type="button" value="zoom x2">
+            <input id="unzoom" type="button" value="unzoom x2">
+        </div>
+        <div class="inline">
+            <input id="skip_transparent" type="checkbox" name="" autocomplete="off" checked>
+            <div>skip rendering transparent color</div>
+        </div>
+        <div class="inline">
+            <input id="flush_canvas" type="checkbox" name="" autocomplete="off">
+            <div>flush other frames</div>
+        </div>
+        <div>
+            <div>current color table:</div>
+            <div id="current_palette"></div>
+            <canvas id="palette" class="palette" width="16" height="16"></canvas>
+        </div>
+
+        <div>
+            <input id="prev_frame" type="button" value="previous frame">
+            <input id="next_frame" type="button" value="next frame">
+            <span id="current_frame">0 | 0</span>
+        </div>
     </div>
 
 
     <script src="gif_data.js"></script>
     <script>
-        let canvas_global_palette = document.getElementById("global_color_table");
-        let div_images = document.getElementsByClassName("images")[0];
+        let c_image = document.getElementById("image");
 
-        if (global_color_table_flag) {
-            let ctx = canvas_global_palette.getContext("2d");
-            let buf = ctx.getImageData(0, 0, canvas_global_palette.width, canvas_global_palette.height);
-            buf.data.fill(200);
-            for (let i = 0; global_color_table.length / 3 > i; i++) {
-                buf.data[i * 4 + 0] = global_color_table[i * 3 + 0];
-                buf.data[i * 4 + 1] = global_color_table[i * 3 + 1];
-                buf.data[i * 4 + 2] = global_color_table[i * 3 + 2];
+        c_image.width = logical_screen_width;
+        c_image.height = logical_screen_height;
+
+        let b_prev_frame = document.getElementById("prev_frame");
+        let b_next_frame = document.getElementById("next_frame");
+        let t_current_frame = document.getElementById("current_frame");
+
+        let b_reset_zoom = document.getElementById("zoom_reset");
+        let b_zoom = document.getElementById("zoom");
+        let b_unzoom = document.getElementById("unzoom");
+
+        let b_skip_transparent = document.getElementById("skip_transparent");
+        let b_flush_canvas = document.getElementById("flush_canvas");
+
+        let t_current_palette = document.getElementById("current_palette");
+        let c_palette = document.getElementById("palette");
+
+
+        let current_frame = 0;
+
+        function update_t_current_frame() {
+            t_current_frame.innerText = String(current_frame + 1) + " | " + String(frames);
+        }
+
+        let skip_transparent = true;
+        let flush_canvas = false;
+
+        function render_image(frame) {
+            if (flush_canvas) {
+                let ctx = c_image.getContext("2d");
+                let buf = ctx.getImageData(0, 0, logical_screen_width, logical_screen_height);
+                buf.data.fill(0);
+                ctx.putImageData(buf, 0, 0);
+            }
+
+            let ctx = c_image.getContext("2d");
+            let buf = ctx.getImageData(image_pos[frame][0], image_pos[frame][1], image_size[frame][0], image_size[frame][1]);
+            for (let i = 0; index_streams[frame].length > i; i++) {
+                if (skip_transparent) {
+                    if (transparent_color_indexs[frame] === index_streams[frame][i]) {
+                        continue
+                    }
+                }
+                buf.data[i * 4 + 0] = global_color_table[index_streams[frame][i] * 3 + 0];
+                buf.data[i * 4 + 1] = global_color_table[index_streams[frame][i] * 3 + 1];
+                buf.data[i * 4 + 2] = global_color_table[index_streams[frame][i] * 3 + 2];
                 buf.data[i * 4 + 3] = 255;
+            }
+            ctx.putImageData(buf, image_pos[frame][0], image_pos[frame][1]);
+        }
+
+        function render_palette(frame) {
+            let ctx = c_palette.getContext("2d");
+            let buf = ctx.getImageData(0, 0, c_palette.width, c_palette.height);
+            if (local_color_tables[frame] !== -1) {
+                for (let i = 0; local_color_tables[frame].length / 3 > i; i++) {
+                    buf.data[i * 4 + 0] = local_color_tables[frame][i * 3 + 0];
+                    buf.data[i * 4 + 1] = local_color_tables[frame][i * 3 + 1];
+                    buf.data[i * 4 + 2] = local_color_tables[frame][i * 3 + 2];
+                    buf.data[i * 4 + 3] = 255;
+                }
+                t_current_palette.innerText = "local";
+
+            } else if (global_color_table_flag) {
+                for (let i = 0; global_color_table.length / 3 > i; i++) {
+                    buf.data[i * 4 + 0] = global_color_table[i * 3 + 0];
+                    buf.data[i * 4 + 1] = global_color_table[i * 3 + 1];
+                    buf.data[i * 4 + 2] = global_color_table[i * 3 + 2];
+                    buf.data[i * 4 + 3] = 255;
+                }
+                t_current_palette.innerText = "global";
             }
             ctx.putImageData(buf, 0, 0);
         }
 
-        for (let current_frame = 0; frames > current_frame; current_frame++) {
-            let canvas_local_palette = document.createElement("canvas");
-            canvas_local_palette.className = "palette";
-            canvas_local_palette.width = 16;
-            canvas_local_palette.height = 16;
+        render_image(current_frame);
+        render_palette(current_frame);
+        update_t_current_frame();
 
-            if (local_color_tables[current_frame] !== -1) {
-                let ctx = canvas_local_palette.getContext("2d");
-                let buf = ctx.getImageData(0, 0, canvas_local_palette.width, canvas_local_palette.height);
-                buf.data.fill(200);
-                for (let i = 0; local_color_tables[current_frame].length / 3 > i; i++) {
-                    buf.data[i * 4 + 0] = local_color_tables[current_frame][i * 3 + 0];
-                    buf.data[i * 4 + 1] = local_color_tables[current_frame][i * 3 + 1];
-                    buf.data[i * 4 + 2] = local_color_tables[current_frame][i * 3 + 2];
-                    buf.data[i * 4 + 3] = 255;
-                }
-                ctx.putImageData(buf, 0, 0);
+
+        let current_zoom = 1;
+
+        b_reset_zoom.addEventListener("click", () => {
+            current_zoom = 1;
+            c_image.style.removeProperty("width");
+        });
+
+        b_zoom.addEventListener("click", () => {
+            current_zoom *= 2;
+            c_image.style.setProperty("width", String(current_zoom * logical_screen_width) + "px");
+        });
+
+        b_unzoom.addEventListener("click", () => {
+            if (current_zoom !== 1) {
+                current_zoom /= 2;
+                c_image.style.setProperty("width", String(current_zoom * logical_screen_width) + "px");
             }
+        });
 
-            div_images.appendChild(canvas_local_palette);
 
 
-            let image = document.createElement("canvas");
-            image.className = current_frame;
-            image.width = logical_screen_width;
-            image.height = logical_screen_height;
+        b_skip_transparent.addEventListener("click", () => {
+            skip_transparent = b_skip_transparent.checked;
+            render_image(current_frame);
+        });
 
-            ctx = image.getContext("2d");
-            buf = ctx.getImageData(image_pos[current_frame][0], image_pos[current_frame][1],
-                image_size[current_frame][0], image_size[current_frame][1]);
-            for (let i = 0; index_streams[current_frame].length > i; i++) {
-                if (transparent_color_indexs[current_frame] === index_streams[current_frame][i]) {
-                    continue
-                }
-                buf.data[i * 4 + 0] = global_color_table[index_streams[current_frame][i] * 3 + 0];
-                buf.data[i * 4 + 1] = global_color_table[index_streams[current_frame][i] * 3 + 1];
-                buf.data[i * 4 + 2] = global_color_table[index_streams[current_frame][i] * 3 + 2];
-                buf.data[i * 4 + 3] = 255;
+        b_flush_canvas.addEventListener("click", () => {
+            flush_canvas = b_flush_canvas.checked;
+            render_image(current_frame);
+        });
+
+        b_next_frame.addEventListener("click", () => {
+            current_frame += 1;
+            if (current_frame == frames) {
+                current_frame = 0;
             }
+            render_image(current_frame);
+            render_palette(current_frame);
+            update_t_current_frame();
+        });
 
+        b_prev_frame.addEventListener("click", () => {
+            current_frame -= 1;
+            if (current_frame < 0) {
+                current_frame = frames - 1;
+            }
+            render_image(current_frame);
+            render_palette(current_frame);
+            update_t_current_frame();
+        });
 
-            ctx.putImageData(buf, image_pos[current_frame][0], image_pos[current_frame][1]);
-
-            div_images.appendChild(image);
-        }
     </script>
 </body>
 
