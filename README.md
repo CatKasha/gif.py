@@ -13,7 +13,7 @@ Attempt to create a gif decoder
 - - [x] Application Extension
 - [x] Image Descriptor
 - [x] Local Color Table
-- [ ] Image Data (kinda works)
+- [x] Image Data
 
 ## viewer
 - [x] Global Color Table

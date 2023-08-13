@@ -19,7 +19,7 @@ def gif(f_path, export_gif_data = None):
     global_color_table = []
 
     # graphic control extension
-    disposal_method = None
+    disposal_method = -1
     user_input_flag = None
     transparent_color_flag = None
     delay_time = 0
@@ -68,7 +68,6 @@ def gif(f_path, export_gif_data = None):
 
     # etc
     frames = 0
-    background_color_indexs = []
     local_color_tables = []
     image_pos = []
     image_size = []
@@ -109,7 +108,7 @@ def gif(f_path, export_gif_data = None):
         buf = fab.read(1)
         # x3B end of file
         while buf != b"\x3B":
-
+            print("frame", frames)
             # skip extentions
             # while buf != b"\x00":
             #     if (buf == b"\x21"):
@@ -123,7 +122,7 @@ def gif(f_path, export_gif_data = None):
 
             while buf == b"\x21":
                 buf = fab.read(1)
-                #print(buf)
+                #print("extention:", buf)
 
                 # graphic control extension
                 if (buf == b"\xF9"):
@@ -134,14 +133,12 @@ def gif(f_path, export_gif_data = None):
                     buf = fab.read(buf)
 
                     another_buf = bin(int.from_bytes(buf[0:1], byteorder="little"))[2:].zfill(8)
-
-                    disposal_method = int(another_buf[3:6])
+                    disposal_method = int(another_buf[3:6], 2)
                     user_input_flag = bool(int(another_buf[6]))
                     transparent_color_flag = bool(int(another_buf[7]))
 
-                    delay_time = int.from_bytes(buf[1:2], byteorder="little")
-
-                    transparent_color_index = int.from_bytes(buf[2:], byteorder="big")
+                    delay_time = int.from_bytes(buf[1:3], byteorder="little")
+                    transparent_color_index = int.from_bytes(buf[3:4], byteorder="little")
                     if (fab.read(1) != b"\x00"):
                         sys.exit("block terminator in graphic control extension not found")
 
@@ -217,6 +214,7 @@ def gif(f_path, export_gif_data = None):
             if (buf == b"\x3B"):
                 break
 
+
             # image descriptor
             if (buf != b"\x2C"):
                 sys.exit("image separator is not 0x2C")
@@ -253,11 +251,7 @@ def gif(f_path, export_gif_data = None):
             # image data
             lzw_minimal_code_size = int.from_bytes(fab.read(1), byteorder="little")
 
-            color_table_size = 0
-            if (local_color_table_flag):
-                color_table_size = 2 ** (size_of_local_table + 1)
-            else:
-                color_table_size = 2 ** (size_of_global_table + 1)
+            color_table_size = 2 ** lzw_minimal_code_size
 
             image_data = ""
             sub_block_size = int.from_bytes(fab.read(1), byteorder="little")
@@ -266,8 +260,11 @@ def gif(f_path, export_gif_data = None):
                     image_data = bin(int.from_bytes(fab.read(1), byteorder="little"))[2:].zfill(8) + image_data
                 sub_block_size = int.from_bytes(fab.read(1), byteorder="little")
 
-            #print(image_data)
-            #print(color_table_size, lzw_minimal_code_size)
+            chk_frame = -1
+
+            if (frames == chk_frame):
+                print(image_data)
+                print(color_table_size, lzw_minimal_code_size)
 
             CLR_pos = 2 ** lzw_minimal_code_size
             EOI_pos = CLR_pos + 1
@@ -279,12 +276,14 @@ def gif(f_path, export_gif_data = None):
             code_size = lzw_minimal_code_size + 1
             init = False
             while True:
-                #print(image_data[-code_size:], int(image_data[-code_size:], 2))
+                if (frames == chk_frame):
+                    print(image_data[-code_size:], int(image_data[-code_size:], 2))
                 current_code = int(image_data[-code_size:], 2)
                 image_data = image_data[:-code_size]
                 code_stream.append(current_code)
 
-                #print(len(code_table), 2 ** code_size - 1)
+                if (frames == chk_frame):
+                    print(len(code_table), 2 ** code_size - 1)
 
                 if (init):
                     index_stream.append(code_table[current_code])
@@ -324,13 +323,6 @@ def gif(f_path, export_gif_data = None):
                     code_table[len(code_table)] = code_table[code_stream[-2]].copy()
                     code_table[len(code_table) - 1].append(code_table[code_stream[-2]][0])
 
-            frames += 1
-            print("frame:", frames)
-
-            if (global_color_table_flag):
-                background_color_indexs.append(background_color_index)
-            else:
-                background_color_indexs.append(-1)
 
             if (local_color_table_flag):
                 local_color_tables.append(local_color_table)
@@ -349,7 +341,8 @@ def gif(f_path, export_gif_data = None):
             image_pos.append([image_left_pos, image_top_pos])
             image_size.append([image_width, image_height])
 
-            #print(index_stream)
+            if(frames == chk_frame):
+                print(index_stream)
 
             buf = []
             for i in range(len(index_stream)):
@@ -359,17 +352,24 @@ def gif(f_path, export_gif_data = None):
             index_streams.append(buf)
             #print(index_streams)
 
+            if(image_height * image_width != len(buf)):
+                print("index_stream is too short", frames)
+
+            #print(interlace_flag)
+
             # for the next loop
             buf = fab.read(1)
+            frames += 1
+
 
     if (export_gif_data):
         with open("gif_data.js", "w") as f:
-            gif_data =  f"let {logical_screen_height = }\n"
-            gif_data += f"let {logical_screen_width = }\n"
+            gif_data =  f"let {logical_screen_height = };\n"
+            gif_data += f"let {logical_screen_width = };\n"
             gif_data += f"let global_color_table_flag = {int(global_color_table_flag)};\n"
+            gif_data += f"let {background_color_index = };\n"
             gif_data += f"let {global_color_table = };\n"
-            gif_data += f"let {frames = }\n"
-            gif_data += f"let {background_color_indexs = }\n"
+            gif_data += f"let {frames = };\n"
             gif_data += f"let {local_color_tables = };\n"
             gif_data += f"let {disposal_methods = };\n"
             gif_data += f"let {transparent_color_indexs = };\n"
