@@ -251,7 +251,7 @@ def gif(f_path, export_gif_data = None):
             # image data
             lzw_minimal_code_size = int.from_bytes(fab.read(1), byteorder="little")
 
-            color_table_size = 2 ** lzw_minimal_code_size
+            code_table_size = 2 ** lzw_minimal_code_size
 
             image_data = ""
             sub_block_size = int.from_bytes(fab.read(1), byteorder="little")
@@ -260,33 +260,23 @@ def gif(f_path, export_gif_data = None):
                     image_data = bin(int.from_bytes(fab.read(1), byteorder="little"))[2:].zfill(8) + image_data
                 sub_block_size = int.from_bytes(fab.read(1), byteorder="little")
 
-            chk_frame = -1
-
-            if (frames == chk_frame):
-                print(image_data)
-                print(color_table_size, lzw_minimal_code_size)
-
             CLR_pos = 2 ** lzw_minimal_code_size
             EOI_pos = CLR_pos + 1
-            
+
             code_table = {}
             code_stream = []
             index_stream = []
 
             code_size = lzw_minimal_code_size + 1
+            code_end = len(image_data)
             init = False
             while True:
-                if (frames == chk_frame):
-                    print(image_data[-code_size:], int(image_data[-code_size:], 2))
-                current_code = int(image_data[-code_size:], 2)
-                image_data = image_data[:-code_size]
+                current_code = int(image_data[code_end - code_size:code_end], 2)
+                code_end -= code_size
                 code_stream.append(current_code)
 
-                if (frames == chk_frame):
-                    print(len(code_table), 2 ** code_size - 1)
-
                 if (init):
-                    index_stream.append(code_table[current_code])
+                    index_stream += code_table[current_code]
                     init = False
                     continue
 
@@ -295,7 +285,7 @@ def gif(f_path, export_gif_data = None):
 
                 if (current_code == CLR_pos):
                     code_table = {}
-                    for i in range(color_table_size):
+                    for i in range(code_table_size):
                         code_table[i] = ([i])
 
                     code_table[CLR_pos] = ("CLR")
@@ -303,26 +293,23 @@ def gif(f_path, export_gif_data = None):
                     code_size = lzw_minimal_code_size + 1
                     init = True
                     continue
-                
-                if (len(code_table) == 2 ** code_size - 1):
-                    if (code_size >= 12):
-                        code_size = 12
-                    else:
+
+                if (len(code_table) == (2 ** code_size) - 1):
+                    if(code_size < 12):
                         code_size += 1
 
                 # prev code
                 # code_stream[-2]
 
                 if(current_code in code_table):
-                    index_stream.append(code_table[current_code])
+                    index_stream += code_table[current_code]
                     code_table[len(code_table)] = code_table[code_stream[-2]].copy()
                     code_table[len(code_table) - 1].append(code_table[current_code][0])
                 else:
-                    index_stream.append(code_table[code_stream[-2]].copy())
-                    index_stream[-1].append(code_table[code_stream[-2]][0])
+                    index_stream += code_table[code_stream[-2]].copy()
+                    index_stream.append(code_table[code_stream[-2]][0])
                     code_table[len(code_table)] = code_table[code_stream[-2]].copy()
                     code_table[len(code_table) - 1].append(code_table[code_stream[-2]][0])
-
 
             if (local_color_table_flag):
                 local_color_tables.append(local_color_table)
@@ -341,18 +328,10 @@ def gif(f_path, export_gif_data = None):
             image_pos.append([image_left_pos, image_top_pos])
             image_size.append([image_width, image_height])
 
-            if(frames == chk_frame):
-                print(index_stream)
+            index_streams.append(index_stream)
 
-            buf = []
-            for i in range(len(index_stream)):
-                for b in range (len(index_stream[i])):
-                    buf.append(index_stream[i][b])
-
-            index_streams.append(buf)
-            #print(index_streams)
-
-            if(image_height * image_width != len(buf)):
+            # check if length of index_stream (color code of pixel) is eqvall to draw resolution
+            if(image_height * image_width != len(index_stream)):
                 print("index_stream is too short", frames)
 
             #print(interlace_flag)
